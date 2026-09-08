@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS — Commenti</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="link-indietro" href="index.html">&larr; INDIETRO</a>
+  <div id="app"></div>
+
+  <script src="config.js"></script>
+  <script>
+    const app = document.getElementById("app");
+
+    function mostraChiuso() {
+      app.innerHTML = `
+        <div id="stato">
+          <h1>[ CHIUSO ]</h1>
+          <p>La raccolta commenti non è attiva in questo momento.</p>
+        </div>`;
+    }
+
+    function mostraGrazie() {
+      app.innerHTML = `
+        <div id="stato">
+          <h1>[ INVIATO ]</h1>
+          <p>Il tuo commento è stato registrato.</p>
+        </div>`;
+    }
+
+    function mostraForm() {
+      app.innerHTML = `
+        <h1>Commenti</h1>
+        <div class="card">
+          <form id="form-commento">
+            <label for="nome">Nome (opzionale)</label>
+            <input type="text" id="nome" name="nome" placeholder="Anonimo va bene">
+
+            <label for="commento">Commento</label>
+            <textarea id="commento" name="commento" placeholder="Scrivi qui..." required></textarea>
+
+            <button type="submit" id="btn-invia" class="btn-primary">Invia</button>
+          </form>
+        </div>`;
+
+      document.getElementById("form-commento").addEventListener("submit", inviaCommento);
+    }
+
+    async function inviaCommento(event) {
+      event.preventDefault();
+      const btn = document.getElementById("btn-invia");
+      btn.disabled = true;
+      btn.textContent = "Invio...";
+
+      const payload = {
+        tipo: "commento",
+        nome: document.getElementById("nome").value.trim(),
+        commento: document.getElementById("commento").value.trim(),
+      };
+
+      try {
+        await fetch(CONFIG.SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload),
+        });
+        mostraGrazie();
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = "Invia";
+        alert("Invio non riuscito, controlla la connessione e riprova.");
+      }
+    }
+
+    if (!CONFIG.RACCOLTA_APERTA) {
+      mostraChiuso();
+    } else {
+      mostraForm();
+    }
+  </script>
+</body>
+</html>

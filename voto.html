@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS — Vota</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="link-indietro" href="index.html">&larr; INDIETRO</a>
+  <div id="app"></div>
+
+  <script src="config.js"></script>
+  <script src="opzioni-voto.js"></script>
+  <script>
+    const app = document.getElementById("app");
+    let scelta = null;
+
+    function mostraChiuso() {
+      app.innerHTML = `
+        <div id="stato">
+          <h1>[ CHIUSO ]</h1>
+          <p>Il voto non è attivo in questo momento.</p>
+        </div>`;
+    }
+
+    function mostraGrazie() {
+      app.innerHTML = `
+        <div id="stato">
+          <h1>[ INVIATO ]</h1>
+          <p>Il tuo voto è stato registrato.</p>
+        </div>`;
+    }
+
+    function mostraOpzioni() {
+      scelta = null;
+      app.innerHTML = `
+        <h1>Vota</h1>
+        <div class="opzioni-voto">
+          ${OPZIONI_VOTO.map((opzione, i) => `
+            <button type="button" class="opzione-voto" data-opzione="${i}">${opzione}</button>
+          `).join("")}
+        </div>
+        <button type="button" id="btn-conferma" class="btn-primary" disabled>Conferma voto</button>`;
+
+      document.querySelectorAll(".opzione-voto").forEach(btn => {
+        btn.addEventListener("click", () => selezionaOpzione(btn));
+      });
+      document.getElementById("btn-conferma").addEventListener("click", inviaVoto);
+    }
+
+    function selezionaOpzione(btnCliccato) {
+      scelta = OPZIONI_VOTO[btnCliccato.dataset.opzione];
+      document.querySelectorAll(".opzione-voto").forEach(b => b.classList.remove("selezionata"));
+      btnCliccato.classList.add("selezionata");
+      document.getElementById("btn-conferma").disabled = false;
+    }
+
+    async function inviaVoto() {
+      if (!scelta) return;
+
+      document.querySelectorAll(".opzione-voto").forEach(b => b.disabled = true);
+      const btnConferma = document.getElementById("btn-conferma");
+      btnConferma.disabled = true;
+      btnConferma.textContent = "Invio...";
+
+      const payload = { tipo: "voto", opzione: scelta };
+
+      try {
+        await fetch(CONFIG.SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload),
+        });
+        mostraGrazie();
+      } catch (err) {
+        alert("Invio non riuscito, controlla la connessione e riprova.");
+        mostraOpzioni();
+      }
+    }
+
+    if (!CONFIG.RACCOLTA_APERTA) {
+      mostraChiuso();
+    } else {
+      mostraOpzioni();
+    }
+  </script>
+</body>
+</html>

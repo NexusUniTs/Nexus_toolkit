@@ -1,0 +1,179 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap');
+
+:root {
+  --bg-hero: #060a1a;
+  --bg-card: #101c40;
+  --border-blue: #2c3f7a;
+  --accent-cyan: #35e0f0;
+  --accent-purple: #8b6cf6;
+  --text-primary: #ffffff;
+  --text-secondary: #93a5cc;
+  --text-dim: #55649a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg-hero);
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--text-secondary);
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 32px 20px 60px;
+  min-height: 100vh;
+}
+
+/* --- Titoli in stile NEXUS --- */
+h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 18px rgba(53, 224, 240, 0.35);
+  font-size: 1.6rem;
+  margin: 0 0 8px;
+}
+
+.link-indietro {
+  display: inline-block;
+  margin-bottom: 24px;
+  color: var(--accent-cyan);
+  text-decoration: none;
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+}
+.link-indietro:hover { text-decoration: underline; }
+
+/* --- Pagina iniziale --- */
+.landing {
+  text-align: center;
+  margin-top: 60px;
+}
+.logo-nexus {
+  font-size: 3rem;
+  margin-bottom: 4px;
+}
+.sottotitolo {
+  color: var(--accent-cyan);
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  margin-bottom: 48px;
+}
+
+.bottone-grande {
+  display: block;
+  width: 100%;
+  padding: 18px 20px;
+  margin-top: 16px;
+  border: 1px solid var(--accent-cyan);
+  border-radius: 4px;
+  background: rgba(53, 224, 240, 0.05);
+  color: var(--accent-cyan);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.bottone-grande:hover {
+  background: rgba(53, 224, 240, 0.15);
+  box-shadow: 0 0 16px rgba(53, 224, 240, 0.25);
+}
+
+/* --- Card generica (form, contenuti) --- */
+.card {
+  background: var(--bg-card);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: 4px;
+  padding: 24px 20px;
+  margin-top: 8px;
+}
+
+/* --- Form (commenti) --- */
+label {
+  display: block;
+  margin-top: 20px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+label::before { content: "> "; color: var(--accent-cyan); }
+
+input, textarea {
+  width: 100%;
+  padding: 12px;
+  margin-top: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-blue);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1rem;
+}
+input::placeholder, textarea::placeholder { color: var(--text-dim); }
+input:focus, textarea:focus { outline: none; border-color: var(--accent-cyan); }
+textarea { min-height: 110px; resize: vertical; }
+
+.btn-primary {
+  margin-top: 28px;
+  width: 100%;
+  padding: 14px;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  border: 1px solid var(--accent-purple);
+  border-radius: 4px;
+  background: rgba(139, 108, 246, 0.12);
+  color: var(--accent-purple);
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.btn-primary:hover:not(:disabled) {
+  background: rgba(139, 108, 246, 0.25);
+  box-shadow: 0 0 16px rgba(139, 108, 246, 0.3);
+}
+.btn-primary:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* --- Pagina voto --- */
+.opzioni-voto { margin-top: 20px; }
+.opzione-voto {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  margin-top: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-blue);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1.05rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.opzione-voto::before { content: "> "; color: var(--text-dim); }
+.opzione-voto:hover:not(:disabled) { border-color: var(--accent-cyan); }
+.opzione-voto:disabled { opacity: 0.4; cursor: not-allowed; }
+.opzione-voto.selezionata {
+  border-color: var(--accent-cyan);
+  background: rgba(53, 224, 240, 0.1);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 12px rgba(53, 224, 240, 0.25);
+}
+.opzione-voto.selezionata::before { color: var(--accent-cyan); }
+
+/* --- Stato (chiuso / grazie) --- */
+#stato {
+  text-align: center;
+  margin-top: 100px;
+  color: var(--text-secondary);
+}
+#stato h1 { font-size: 2.4rem; text-shadow: none; }
