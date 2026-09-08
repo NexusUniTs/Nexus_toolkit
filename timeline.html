@@ -6,6 +6,7 @@
 <title>NEXUS // TIMELINE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="config.js"></script>
 <style>
 :root{
   --bg-hero:#060a1a;
@@ -163,6 +164,20 @@ input,textarea,select{font-family:inherit;}
 .stats b{color:var(--text-primary); font-weight:400;}
 .stats .stat-cyan b{color:var(--accent-cyan);}
 .stats .stat-purple b{color:var(--accent-purple);}
+
+.sync-indicator{
+  display:flex; align-items:center; gap:7px;
+  border:1px solid var(--border-blue); border-radius:4px;
+  padding:6px 11px; font-size:0.72rem; color:var(--text-dim);
+  cursor:pointer; flex-shrink:0; letter-spacing:0.03em; transition:all .15s;
+  background:transparent;
+}
+.sync-indicator:hover{border-color:var(--text-secondary); color:var(--text-secondary);}
+.sync-dot{width:7px; height:7px; border-radius:50%; flex-shrink:0; background:var(--text-dim); transition:background .2s;}
+.sync-indicator.ok .sync-dot{background:var(--accent-cyan); box-shadow:0 0 6px var(--accent-cyan);}
+.sync-indicator.syncing .sync-dot{background:var(--accent-purple); box-shadow:0 0 6px var(--accent-purple); animation:pulse 0.9s ease-in-out infinite;}
+.sync-indicator.error .sync-dot{background:var(--danger); box-shadow:0 0 6px var(--danger);}
+@keyframes pulse{0%,100%{opacity:1;} 50%{opacity:0.35;}}
 
 /* ---------- GRID VIEWPORT ---------- */
 .viewport-wrap{flex:1; overflow:hidden; position:relative;}
@@ -459,6 +474,10 @@ input,textarea,select{font-family:inherit;}
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="12" x2="12" y2="7"/><line x1="12" y1="12" x2="15.5" y2="14"/></svg>
       OGGI
     </button>
+    <button class="sync-indicator" id="syncIndicator" title="Clic per sincronizzare ora">
+      <span class="sync-dot"></span>
+      <span id="syncLabel">non collegato</span>
+    </button>
     <div class="stats" id="statsBar"></div>
   </div>
 
@@ -513,17 +532,76 @@ let pendingDeleteType = null;
 let pendingDeleteId = null;
 
 /* ===================== PERSISTENCE ===================== */
-/* Salvataggio nel localStorage del browser: resta sul dispositivo/browser
-   con cui e' stata usata la pagina. Per portare i dati su un altro
-   dispositivo o browser usa Esporta/Importa JSON, oppure "FILE LOCALE". */
+/* I dati sono condivisi tra tutti tramite lo stesso Google Apps Script
+   usato per commenti e voti (vedi config.js -> CONFIG.SCRIPT_URL).
+   Il localStorage viene usato solo come copia di riserva offline. */
+const REMOTE_URL = (typeof CONFIG !== 'undefined' && CONFIG.SCRIPT_URL) ? CONFIG.SCRIPT_URL : null;
+const POLL_MS = 12000;
+let lastPushAt = 0;
+let pollTimer = null;
+
+function setSyncStatus(mode, label){
+  const el = document.getElementById('syncIndicator');
+  const lbl = document.getElementById('syncLabel');
+  if(!el || !lbl) return;
+  el.classList.remove('ok','syncing','error');
+  if(mode) el.classList.add(mode);
+  lbl.textContent = label;
+}
+
+async function fetchRemote(){
+  if(!REMOTE_URL) return null;
+  const res = await fetch(REMOTE_URL + '?action=getTimeline', {method:'GET'});
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const json = await res.json();
+  if(json && Array.isArray(json.projects)) return json;
+  return null;
+}
+
+async function pushRemote(payload){
+  if(!REMOTE_URL) return;
+  await fetch(REMOTE_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({tipo:'timeline', payload})
+  });
+  // con "no-cors" non possiamo leggere la risposta: assumiamo l'invio andato a buon fine.
+}
+
 async function loadData(){
+  if(!REMOTE_URL){
+    setSyncStatus('error', 'backend non configurato');
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){ const parsed = JSON.parse(raw); if(parsed && Array.isArray(parsed.projects)) return parsed; }
+    }catch(e){}
+    return null;
+  }
+  setSyncStatus('syncing', 'sincronizzazione...');
+  try{
+    const remote = await fetchRemote();
+    if(remote){
+      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(remote)); }catch(e){}
+      setSyncStatus('ok', 'sincronizzato '+nowHM());
+      return remote;
+    }
+  }catch(e){
+    console.error('Caricamento da Google Sheets fallito', e);
+  }
+  // fallback: copia locale se il backend non e' raggiungibile
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw){
       const parsed = JSON.parse(raw);
-      if(parsed && Array.isArray(parsed.projects)) return parsed;
+      if(parsed && Array.isArray(parsed.projects)){
+        setSyncStatus('error', 'offline, copia locale');
+        showToast('Backend non raggiungibile: uso l\u2019ultima copia salvata su questo browser');
+        return parsed;
+      }
     }
-  }catch(e){ /* dati assenti o non validi — fall through */ }
+  }catch(e){}
+  setSyncStatus('error', 'non raggiungibile');
   return null;
 }
 
@@ -539,12 +617,21 @@ async function saveData(){
     collapsed: state.collapsed,
     zoom: state.zoom
   };
-  try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  }catch(e){
-    console.error('Salvataggio automatico fallito', e);
-    showToast('Salvataggio automatico non riuscito');
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); }catch(e){}
+
+  if(REMOTE_URL){
+    setSyncStatus('syncing', 'invio...');
+    try{
+      await pushRemote(payload);
+      lastPushAt = Date.now();
+      setSyncStatus('ok', 'sincronizzato '+nowHM());
+    }catch(e){
+      console.error('Invio a Google Sheets fallito', e);
+      setSyncStatus('error', 'invio non riuscito');
+      showToast('Sincronizzazione non riuscita, controlla la connessione');
+    }
   }
+
   if(fileHandle){
     try{
       const writable = await fileHandle.createWritable();
@@ -557,6 +644,41 @@ async function saveData(){
       setLinkedLabel(fileHandle.name, false);
     }
   }
+}
+
+function nowHM(){
+  const d = new Date();
+  return pad2(d.getHours())+':'+pad2(d.getMinutes());
+}
+
+/* Sincronizzazione periodica: tiene la timeline allineata a quello che
+   scrivono eventuali altre persone collegate nello stesso momento. Si
+   ferma quando c'e' un modal aperto o subito dopo un nostro salvataggio,
+   per non interrompere una modifica in corso o creare "sfarfallii". */
+async function pollRemote(){
+  if(!REMOTE_URL) return;
+  if(document.querySelector('.overlay')) return;
+  if(Date.now() - lastPushAt < 4000) return;
+  try{
+    const remote = await fetchRemote();
+    if(remote){
+      const incoming = JSON.stringify({projects:remote.projects, phases:remote.phases});
+      const current = JSON.stringify({projects:state.projects, phases:state.phases});
+      if(incoming !== current){
+        state.projects = remote.projects || [];
+        state.phases = remote.phases || [];
+        try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(remote)); }catch(e){}
+        render();
+      }
+      setSyncStatus('ok', 'sincronizzato '+nowHM());
+    }
+  }catch(e){
+    setSyncStatus('error', 'connessione persa');
+  }
+}
+function startPolling(){
+  clearInterval(pollTimer);
+  pollTimer = setInterval(pollRemote, POLL_MS);
 }
 
 /* ---- optional: keep a live JSON file on disk in sync (Chromium browsers) ---- */
@@ -1373,6 +1495,10 @@ function bindEvents(){
     openPhaseModal(null, preset);
   };
   document.getElementById('linkFileBtn').onclick = toggleFileLink;
+  document.getElementById('syncIndicator').onclick = async ()=>{
+    setSyncStatus('syncing', 'sincronizzazione...');
+    await loadDataAndApply();
+  };
   document.getElementById('emptyNewProjectBtn').onclick = ()=>openProjectModal(null);
   document.getElementById('todayBtn').onclick = scrollToToday;
   document.getElementById('exportBtn').onclick = exportBackup;
@@ -1402,14 +1528,22 @@ function scrollToToday(){
 }
 
 /* ===================== INIT ===================== */
-async function init(){
+async function loadDataAndApply(){
   const loaded = await loadData();
   if(loaded){
     state.projects = loaded.projects || [];
     state.phases = loaded.phases || [];
     state.collapsed = loaded.collapsed || {};
     state.zoom = loaded.zoom || 'month';
-  } else {
+    render();
+    return true;
+  }
+  return false;
+}
+
+async function init(){
+  const ok = await loadDataAndApply();
+  if(!ok && !REMOTE_URL){
     seedIfEmpty();
     await saveData();
   }
@@ -1419,6 +1553,7 @@ async function init(){
   setLinkedLabel(null);
   render();
   setTimeout(scrollToToday, 60);
+  startPolling();
 }
 
 init();

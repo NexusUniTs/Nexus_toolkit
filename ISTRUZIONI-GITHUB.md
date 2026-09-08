@@ -39,12 +39,23 @@ git push -u origin main
 
 Quella e' la tua pagina live, con i tre bottoni: **Lascia un commento**, **Vota**, **Visualizza timeline**.
 
-## 4. Nota sui commenti e sui voti (Google Sheets)
+## 4. Collega commenti, voti E la timeline allo stesso Google Sheet
 
-`commenti.html` e `voto.html` inviano i dati a un Google Apps Script (vedi `config.js` e `apps-script.gs`), quindi se vuoi che continuino a funzionare devi ricollegarli al tuo Google Sheet come avevi gia' fatto in precedenza (l'URL dello script va in `config.js`). La timeline invece e' completamente autonoma e non richiede nessuna configurazione esterna.
+Adesso `commenti.html`, `voto.html` **e** `timeline.html` usano tutti lo stesso backend (un unico Google Apps Script + lo stesso Google Sheet), quindi la configurazione e' unica per tutti e tre:
 
-## 5. Nota sulla Timeline
+1. Se non l'hai gia' fatto, crea un Google Sheet e vai su **Estensioni > Apps Script**.
+2. Incolla il contenuto di `apps-script.gs` (sostituisce quello vecchio se ne avevi gia' uno).
+3. Clicca **Distribuisci > Nuova distribuzione** (o, se avevi gia' un URL da mantenere, **Gestisci distribuzioni > icona matita > Versione: Nuova > Distribuisci**), tipo "App web", accesso "Chiunque".
+4. Copia l'URL del Web App e incollalo in `config.js` come `SCRIPT_URL` (se lo avevi gia' configurato per commenti/voti, e' lo stesso URL: basta aver ripubblicato con il codice aggiornato).
+5. Fai commit + push di `config.js` e `apps-script.gs`.
 
-`timeline.html` salva i dati (progetti e fasi) nel browser di chi la usa (localStorage): se apri la pagina da un altro dispositivo o browser, non vedrai gli stessi dati automaticamente. Per portare i dati da un dispositivo all'altro, usa i pulsanti **Esporta** / **Importa** in alto (creano/leggono un file `.json`), oppure il pulsante **FILE LOCALE**, che su Chrome/Edge collega un file `.json` sul tuo computer sempre aggiornato automaticamente.
+Cosi' facendo la timeline creera' automaticamente un terzo foglio chiamato **"TimelineData"** dentro il tuo Google Sheet (oltre a "Commenti" e "Voti" gia' esistenti), dove tiene i dati di progetti e fasi in formato JSON.
 
-Se in futuro vuoi che la timeline sia condivisa tra piu' persone/dispositivi (dati centralizzati, come per commenti e voti), serve collegarla a un backend esterno (es. lo stesso Google Sheets, oppure un piccolo database) — fammi sapere se vuoi che te lo prepari.
+## 5. Come funziona la sincronizzazione della Timeline
+
+- **Chiunque visiti il sito puo' modificare la timeline** (creare/spostare/eliminare fasi e progetti): non c'e' una password, come richiesto.
+- Ogni modifica viene inviata subito al Google Sheet condiviso, e ogni ~12 secondi la pagina ricontrolla se ci sono aggiornamenti fatti da altri, cosi' tutti vedono (quasi) la stessa cosa in tempo reale.
+- L'indicatore in alto a destra (pallino + orario) mostra lo stato: **ciano** = sincronizzato, **viola lampeggiante** = sincronizzazione in corso, **rosso** = problema di connessione. Cliccandolo forzi un aggiornamento immediato.
+- Dato che non c'e' protezione, se due persone modificano la stessa cosa nello stesso istante vince l'ultima modifica salvata (non c'e' un merge intelligente). Per un piccolo team studentesco di solito non e' un problema, ma tienilo a mente.
+- Se il backend non e' raggiungibile (es. sei offline), la pagina mostra l'ultima copia salvata nel browser e riprova automaticamente; i pulsanti **Esporta / Importa JSON** e **FILE LOCALE** restano comunque disponibili come backup manuale.
+- Se `config.js` non ha un `SCRIPT_URL` valido, la timeline funziona comunque ma resta locale al singolo browser (nessuna condivisione), e te lo segnala nell'indicatore in alto ("backend non configurato").
