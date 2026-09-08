@@ -127,6 +127,9 @@ input,textarea,select{font-family:inherit;}
 .btn.ghost:hover{border-color:var(--text-secondary); color:var(--text-primary); box-shadow:none;}
 .btn.danger{border-color:var(--danger); color:var(--danger); background:rgba(255,84,112,0.08);}
 .btn.danger:hover{background:rgba(255,84,112,0.18); box-shadow:0 0 14px rgba(255,84,112,0.25);}
+.btn.purple-solid{border-color:var(--accent-purple); color:#fff; background:var(--accent-purple);}
+.btn.purple-solid:hover{background:#7a58f2; box-shadow:0 0 16px rgba(139,108,246,0.5);}
+.btn.purple-solid.saving{opacity:0.7; cursor:wait;}
 .btn:disabled{opacity:0.35; cursor:not-allowed; box-shadow:none;}
 
 /* ---------- SUBBAR ---------- */
@@ -457,6 +460,10 @@ input,textarea,select{font-family:inherit;}
       </button>
       <button class="btn cyan" id="newPhaseBtn">+ FASE</button>
       <button class="btn cyan" id="newProjectBtn">+ PROGETTO</button>
+      <button class="btn purple-solid" id="manualSaveBtn" title="Forza il salvataggio immediato sul Google Sheet">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        SALVA
+      </button>
     </div>
   </div>
 
@@ -539,6 +546,7 @@ const REMOTE_URL = (typeof CONFIG !== 'undefined' && CONFIG.SCRIPT_URL) ? CONFIG
 const POLL_MS = 12000;
 let lastPushAt = 0;
 let pollTimer = null;
+let dirty = false;
 
 function setSyncStatus(mode, label){
   const el = document.getElementById('syncIndicator');
@@ -607,10 +615,12 @@ async function loadData(){
 
 let saveTimer = null;
 function scheduleSave(){
+  dirty = true;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveData, 200);
 }
 async function saveData(){
+  clearTimeout(saveTimer);
   const payload = {
     projects: state.projects,
     phases: state.phases,
@@ -624,12 +634,15 @@ async function saveData(){
     try{
       await pushRemote(payload);
       lastPushAt = Date.now();
+      dirty = false;
       setSyncStatus('ok', 'sincronizzato '+nowHM());
     }catch(e){
       console.error('Invio a Google Sheets fallito', e);
       setSyncStatus('error', 'invio non riuscito');
       showToast('Sincronizzazione non riuscita, controlla la connessione');
     }
+  } else {
+    dirty = false;
   }
 
   if(fileHandle){
@@ -1499,6 +1512,21 @@ function bindEvents(){
     setSyncStatus('syncing', 'sincronizzazione...');
     await loadDataAndApply();
   };
+  document.getElementById('manualSaveBtn').onclick = async ()=>{
+    const btn = document.getElementById('manualSaveBtn');
+    btn.classList.add('saving');
+    btn.disabled = true;
+    await saveData();
+    btn.classList.remove('saving');
+    btn.disabled = false;
+    if(!REMOTE_URL){
+      showToast('Backend non configurato: dati salvati solo su questo browser');
+    } else if(dirty){
+      showToast('Salvataggio non riuscito, riprova');
+    } else {
+      showToast('Dati salvati sul Google Sheet');
+    }
+  };
   document.getElementById('emptyNewProjectBtn').onclick = ()=>openProjectModal(null);
   document.getElementById('todayBtn').onclick = scrollToToday;
   document.getElementById('exportBtn').onclick = exportBackup;
@@ -1514,6 +1542,12 @@ function bindEvents(){
   document.addEventListener('keydown', (e)=>{
     if(e.key === 'Escape'){
       document.querySelectorAll('.overlay').forEach(o=>o.remove());
+    }
+  });
+  window.addEventListener('beforeunload', (e)=>{
+    if(dirty && REMOTE_URL){
+      e.preventDefault();
+      e.returnValue = '';
     }
   });
 }
