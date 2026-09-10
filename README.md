@@ -31,9 +31,12 @@ Apri `config.js`, sostituisci `INCOLLA_QUI_URL_APPS_SCRIPT` con l'URL copiato,
 salva.
 
 ## 4. Modifica le opzioni di voto
-Apri `opzioni-voto.js` e modifica la lista `OPZIONI_VOTO` — una stringa per
-riga, tra virgolette, separate da virgola. L'ordine nel file è l'ordine dei
-bottoni sul sito.
+Apri `opzioni-voto.js` e modifica la lista `OPZIONI_VOTO`: ogni opzione e'
+un blocco `{ titolo: "...", progetto: "..." }` (il "progetto" e' il
+sottotitolo mostrato sotto al titolo, es. l'esempio concreto di quella
+proposta). L'ordine nel file non conta: la pagina mescola le opzioni ad
+ogni visita e le persone le riordinano trascinandole dalla piu' gradita
+alla meno gradita.
 
 ## 5. Pubblica su GitHub Pages
 1. Crea un repository pubblico su GitHub (o usa quello che hai già).

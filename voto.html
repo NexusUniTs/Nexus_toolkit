@@ -10,11 +10,21 @@
   <a class="link-indietro" href="index.html">&larr; INDIETRO</a>
   <div id="app"></div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
   <script src="config.js"></script>
   <script src="opzioni-voto.js"></script>
   <script>
     const app = document.getElementById("app");
-    let scelta = null;
+    let sortableInstance = null;
+
+    function mescola(lista) {
+      const arr = lista.slice();
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
 
     function mostraChiuso() {
       app.innerHTML = `
@@ -28,43 +38,57 @@
       app.innerHTML = `
         <div id="stato">
           <h1>[ INVIATO ]</h1>
-          <p>Il tuo voto è stato registrato.</p>
+          <p>Il tuo ordine di preferenza è stato registrato.</p>
         </div>`;
     }
 
     function mostraOpzioni() {
-      scelta = null;
+      const opzioni = mescola(OPZIONI_VOTO);
       app.innerHTML = `
         <h1>Vota</h1>
-        <div class="opzioni-voto">
-          ${OPZIONI_VOTO.map((opzione, i) => `
-            <button type="button" class="opzione-voto" data-opzione="${i}">${opzione}</button>
+        <p class="istruzioni-voto">Trascina le opzioni per ordinarle: in cima quella che ti convince di più, in fondo quella che ti convince di meno.</p>
+        <div class="lista-rank" id="lista-rank">
+          ${opzioni.map((op, i) => `
+            <div class="rank-item" data-titolo="${op.titolo}">
+              <span class="rank-handle" title="Trascina per riordinare">&#8942;&#8942;</span>
+              <span class="rank-badge">${i + 1}</span>
+              <span class="rank-text">
+                <span class="rank-title">${op.titolo}</span>
+                <span class="rank-example">${op.progetto}</span>
+              </span>
+            </div>
           `).join("")}
         </div>
-        <button type="button" id="btn-conferma" class="btn-primary" disabled>Conferma voto</button>`;
+        <button type="button" id="btn-conferma" class="btn-primary">Conferma ordine</button>`;
 
-      document.querySelectorAll(".opzione-voto").forEach(btn => {
-        btn.addEventListener("click", () => selezionaOpzione(btn));
+      const lista = document.getElementById("lista-rank");
+      sortableInstance = Sortable.create(lista, {
+        animation: 180,
+        handle: ".rank-handle",
+        ghostClass: "rank-ghost",
+        chosenClass: "rank-chosen",
+        onSort: rinumera,
       });
+
       document.getElementById("btn-conferma").addEventListener("click", inviaVoto);
     }
 
-    function selezionaOpzione(btnCliccato) {
-      scelta = OPZIONI_VOTO[btnCliccato.dataset.opzione];
-      document.querySelectorAll(".opzione-voto").forEach(b => b.classList.remove("selezionata"));
-      btnCliccato.classList.add("selezionata");
-      document.getElementById("btn-conferma").disabled = false;
+    function rinumera() {
+      document.querySelectorAll("#lista-rank .rank-item").forEach((el, i) => {
+        el.querySelector(".rank-badge").textContent = i + 1;
+      });
     }
 
     async function inviaVoto() {
-      if (!scelta) return;
+      const btn = document.getElementById("btn-conferma");
+      btn.disabled = true;
+      btn.textContent = "Invio...";
+      if (sortableInstance) sortableInstance.option("disabled", true);
 
-      document.querySelectorAll(".opzione-voto").forEach(b => b.disabled = true);
-      const btnConferma = document.getElementById("btn-conferma");
-      btnConferma.disabled = true;
-      btnConferma.textContent = "Invio...";
+      const ordine = Array.from(document.querySelectorAll("#lista-rank .rank-item"))
+        .map(el => el.dataset.titolo);
 
-      const payload = { tipo: "voto", opzione: scelta };
+      const payload = { tipo: "voto", ordine };
 
       try {
         await fetch(CONFIG.SCRIPT_URL, {
@@ -76,7 +100,9 @@
         mostraGrazie();
       } catch (err) {
         alert("Invio non riuscito, controlla la connessione e riprova.");
-        mostraOpzioni();
+        btn.disabled = false;
+        btn.textContent = "Conferma ordine";
+        if (sortableInstance) sortableInstance.option("disabled", false);
       }
     }
 

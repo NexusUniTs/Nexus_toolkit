@@ -177,3 +177,77 @@ textarea { min-height: 110px; resize: vertical; }
   color: var(--text-secondary);
 }
 #stato h1 { font-size: 2.4rem; text-shadow: none; }
+
+/* --- Pagina voto: ordinamento per trascinamento --- */
+.istruzioni-voto {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: -4px 0 4px;
+}
+.lista-rank {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rank-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-blue);
+  border-radius: 4px;
+  cursor: grab;
+  user-select: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.rank-item:active { cursor: grabbing; }
+.rank-handle {
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  line-height: 1;
+  flex-shrink: 0;
+  padding: 4px;
+  touch-action: none;
+}
+.rank-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--accent-cyan);
+  color: var(--accent-cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.rank-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rank-title {
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+.rank-example {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+.rank-ghost { opacity: 0.35; }
+.rank-chosen {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 12px rgba(53, 224, 240, 0.25);
+}
+/* La prima riga (1° posto) si mette in evidenza in oro, chiunque sia */
+.rank-item:first-child .rank-badge {
+  border-color: #ffd24d;
+  color: #ffd24d;
+  box-shadow: 0 0 8px rgba(255, 210, 77, 0.35);
+}

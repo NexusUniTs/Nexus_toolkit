@@ -33,12 +33,17 @@ function doPost(e) {
   var sheet;
 
   if (data.tipo === "voto") {
+    // "ordine" e' un array di titoli, dal piu' gradito al meno gradito
+    // (viene dalla pagina voto.html con l'ordinamento a trascinamento).
+    // Se cambi il numero di opzioni in opzioni-voto.js, aggiorna anche
+    // l'intestazione qui sotto (aggiungi/togli "N° posto").
     sheet = ss.getSheetByName("Voti");
     if (!sheet) {
       sheet = ss.insertSheet("Voti");
-      sheet.appendRow(["timestamp", "opzione"]);
+      sheet.appendRow(["timestamp", "1° posto", "2° posto", "3° posto", "4° posto", "5° posto"]);
     }
-    sheet.appendRow([new Date(), data.opzione || ""]);
+    var ordine = data.ordine || [];
+    sheet.appendRow([new Date()].concat(ordine));
 
   } else if (data.tipo === "timeline") {
     sheet = ss.getSheetByName("TimelineData");
